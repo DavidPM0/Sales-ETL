@@ -202,9 +202,10 @@
         }
 
         .kpi-value {
-            font-size: 1.3rem;
+            font-size: 1.15rem;
             font-weight: 700;
             color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
         }
 
         .kpi-subtitle {
@@ -358,26 +359,26 @@
     <div class="kpi-grid">
         <div class="kpi-card yellow">
             <span class="kpi-title">Grupo CUBSO Mayor Adjudicación</span>
-            <span class="kpi-value" id="kpiGrupoMonto">S/ 116.61 B</span>
-            <span class="kpi-subtitle" id="kpiGrupoNombre">Servicios de construcción e instalaciones</span>
+            <span class="kpi-value" id="kpiGrupoMonto">S/ 0.00</span>
+            <span class="kpi-subtitle" id="kpiGrupoNombre">-</span>
         </div>
 
         <div class="kpi-card green">
             <span class="kpi-title">Top Commodity Demandado</span>
-            <span class="kpi-value" id="kpiCommMonto">S/ 16.33 B</span>
-            <span class="kpi-subtitle" id="kpiCommNombre">Construcción de escuelas</span>
+            <span class="kpi-value" id="kpiCommMonto">S/ 0.00</span>
+            <span class="kpi-subtitle" id="kpiCommNombre">-</span>
         </div>
 
         <div class="kpi-card">
-            <span class="kpi-title">Objeto Contractual Lider</span>
-            <span class="kpi-value" id="kpiObjetoMonto">S/ 97.39 B</span>
-            <span class="kpi-subtitle" id="kpiObjetoNombre">Obra (19,986 Adjudicaciones)</span>
+            <span class="kpi-title">Objeto Contractual Líder</span>
+            <span class="kpi-value" id="kpiObjetoMonto">S/ 0.00</span>
+            <span class="kpi-subtitle" id="kpiObjetoNombre">-</span>
         </div>
 
         <div class="kpi-card purple">
             <span class="kpi-title">Sistema Contratación Predominante</span>
-            <span class="kpi-value" id="kpiSistemaMonto">S/ 119.85 B</span>
-            <span class="kpi-subtitle" id="kpiSistemaNombre">Suma alzada (188,949 Adjudicaciones)</span>
+            <span class="kpi-value" id="kpiSistemaMonto">S/ 0.00</span>
+            <span class="kpi-subtitle" id="kpiSistemaNombre">-</span>
         </div>
     </div>
 
@@ -520,10 +521,39 @@
         }
 
         function updateCharts() {
+            renderKPIs();
             renderCubsoDoughnut();
             renderCommoditiesBar();
             renderObjetoChart();
             renderSistemaChart();
+        }
+
+        function renderKPIs() {
+            if (!rawData) return;
+
+            if (rawData.top5_grupos_cubso && rawData.top5_grupos_cubso.length > 0) {
+                const topG = rawData.top5_grupos_cubso[0];
+                document.getElementById('kpiGrupoMonto').textContent = formatCurrency(topG.monto_adjudicado);
+                document.getElementById('kpiGrupoNombre').textContent = topG.grupo;
+            }
+
+            if (rawData.top_commodities && rawData.top_commodities.length > 0) {
+                const topC = rawData.top_commodities[0];
+                document.getElementById('kpiCommMonto').textContent = formatCurrency(topC.monto_adjudicado);
+                document.getElementById('kpiCommNombre').textContent = topC.commodity;
+            }
+
+            if (rawData.objeto_contractual && rawData.objeto_contractual.length > 0) {
+                const topO = rawData.objeto_contractual[0];
+                document.getElementById('kpiObjetoMonto').textContent = formatCurrency(topO.monto_adjudicado);
+                document.getElementById('kpiObjetoNombre').textContent = topO.objeto + ' (' + formatNumber(topO.adjudicados) + ' Adjudicaciones)';
+            }
+
+            if (rawData.sistema_contratacion && rawData.sistema_contratacion.length > 0) {
+                const topS = rawData.sistema_contratacion[0];
+                document.getElementById('kpiSistemaMonto').textContent = formatCurrency(topS.monto_adjudicado);
+                document.getElementById('kpiSistemaNombre').textContent = topS.sistema + ' (' + formatNumber(topS.adjudicados) + ' Adjudicaciones)';
+            }
         }
 
         // 1. Doughnut Chart: Top 5 Grupos CUBSO (Matching Attached Image)
@@ -623,7 +653,7 @@
                                 color: '#94a3b8',
                                 font: { size: 10 },
                                 callback: function(val) {
-                                    return 'S/ ' + (val / 1e9).toFixed(1) + 'B';
+                                    return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', maximumFractionDigits: 0 }).format(val);
                                 }
                             }
                         },
@@ -728,7 +758,7 @@
                             ticks: {
                                 color: '#94a3b8',
                                 callback: function(val) {
-                                    return 'S/ ' + (val / 1e9).toFixed(0) + 'B';
+                                    return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', maximumFractionDigits: 0 }).format(val);
                                 }
                             }
                         }
