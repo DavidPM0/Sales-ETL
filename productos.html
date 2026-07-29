@@ -629,7 +629,8 @@
                         label: 'Monto Adjudicado (S/)',
                         data: data,
                         backgroundColor: '#38bdf8',
-                        borderRadius: 6
+                        borderRadius: 6,
+                        minBarLength: 10
                     }]
                 },
                 options: {
@@ -712,7 +713,7 @@
             });
         }
 
-        // 4. Bar Chart: Sistema de Contratación
+        // 4. Bar Chart: Sistema de Contratación (Min Bar Height Added for Small Values)
         function renderSistemaChart() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('sistemaChart');
@@ -732,7 +733,8 @@
                         label: 'Monto Adjudicado (S/)',
                         data: data,
                         backgroundColor: '#818cf8',
-                        borderRadius: 6
+                        borderRadius: 6,
+                        minBarLength: 14 /* Ensures small bars like Tarifas, Porcentajes, Honorario are clearly visible and clickable */
                     }]
                 },
                 options: {
