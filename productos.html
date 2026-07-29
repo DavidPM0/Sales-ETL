@@ -520,6 +520,21 @@
             });
         }
 
+        function getFilteredDataset(overallKey, yearKey, limit) {
+            if (!rawData) return [];
+            const fAnio = document.getElementById('filterAnio').value;
+            let list = [];
+            if (fAnio && rawData[yearKey]) {
+                list = rawData[yearKey].filter(function(item) { return item.anio === fAnio; });
+            } else {
+                list = rawData[overallKey] || [];
+            }
+            if (limit && limit > 0) {
+                return list.slice(0, limit);
+            }
+            return list;
+        }
+
         function updateCharts() {
             renderKPIs();
             renderCubsoDoughnut();
@@ -531,32 +546,36 @@
         function renderKPIs() {
             if (!rawData) return;
 
-            if (rawData.top5_grupos_cubso && rawData.top5_grupos_cubso.length > 0) {
-                const topG = rawData.top5_grupos_cubso[0];
+            const top5Cubso = getFilteredDataset('top5_grupos_cubso', 'top5_grupos_cubso_anio', 1);
+            if (top5Cubso.length > 0) {
+                const topG = top5Cubso[0];
                 document.getElementById('kpiGrupoMonto').textContent = formatCurrency(topG.monto_adjudicado);
                 document.getElementById('kpiGrupoNombre').textContent = topG.grupo;
             }
 
-            if (rawData.top_commodities && rawData.top_commodities.length > 0) {
-                const topC = rawData.top_commodities[0];
+            const topComm = getFilteredDataset('top_commodities', 'top_commodities_anio', 1);
+            if (topComm.length > 0) {
+                const topC = topComm[0];
                 document.getElementById('kpiCommMonto').textContent = formatCurrency(topC.monto_adjudicado);
                 document.getElementById('kpiCommNombre').textContent = topC.commodity;
             }
 
-            if (rawData.objeto_contractual && rawData.objeto_contractual.length > 0) {
-                const topO = rawData.objeto_contractual[0];
+            const objList = getFilteredDataset('objeto_contractual', 'objeto_contractual_anio', 1);
+            if (objList.length > 0) {
+                const topO = objList[0];
                 document.getElementById('kpiObjetoMonto').textContent = formatCurrency(topO.monto_adjudicado);
                 document.getElementById('kpiObjetoNombre').textContent = topO.objeto + ' (' + formatNumber(topO.adjudicados) + ' Adjudicaciones)';
             }
 
-            if (rawData.sistema_contratacion && rawData.sistema_contratacion.length > 0) {
-                const topS = rawData.sistema_contratacion[0];
+            const sisList = getFilteredDataset('sistema_contratacion', 'sistema_contratacion_anio', 1);
+            if (sisList.length > 0) {
+                const topS = sisList[0];
                 document.getElementById('kpiSistemaMonto').textContent = formatCurrency(topS.monto_adjudicado);
                 document.getElementById('kpiSistemaNombre').textContent = topS.sistema + ' (' + formatNumber(topS.adjudicados) + ' Adjudicaciones)';
             }
         }
 
-        // 1. Doughnut Chart: Top 5 Grupos CUBSO (Matching Attached Image)
+        // 1. Doughnut Chart: Top 5 Grupos CUBSO
         function renderCubsoDoughnut() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('cubsoDoughnutChart');
@@ -564,11 +583,10 @@
             const ctx = el.getContext('2d');
             if (cubsoChartInstance) cubsoChartInstance.destroy();
 
-            const top5 = rawData.top5_grupos_cubso || [];
+            const top5 = getFilteredDataset('top5_grupos_cubso', 'top5_grupos_cubso_anio', 5);
             const labels = top5.map(function(g) { return g.grupo; });
             const data = top5.map(function(g) { return g.monto_adjudicado; });
 
-            // Curated harmonious dark mode palette matching user image
             const colors = ['#facc15', '#34d399', '#38bdf8', '#f87171', '#c084fc'];
 
             cubsoChartInstance = new Chart(ctx, {
@@ -609,7 +627,7 @@
             });
         }
 
-        // 2. Horizontal Bar Chart: Top Commodities Demandados (Matching Attached Image)
+        // 2. Horizontal Bar Chart: Top Commodities Demandados
         function renderCommoditiesBar() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('commoditiesBarChart');
@@ -617,7 +635,7 @@
             const ctx = el.getContext('2d');
             if (commoditiesChartInstance) commoditiesChartInstance.destroy();
 
-            const topComm = rawData.top_commodities || [];
+            const topComm = getFilteredDataset('top_commodities', 'top_commodities_anio', 10);
             const labels = topComm.map(function(c) { return c.commodity; });
             const data = topComm.map(function(c) { return c.monto_adjudicado; });
 
@@ -678,7 +696,7 @@
             const ctx = el.getContext('2d');
             if (objetoChartInstance) objetoChartInstance.destroy();
 
-            const objData = rawData.objeto_contractual || [];
+            const objData = getFilteredDataset('objeto_contractual', 'objeto_contractual_anio');
             const labels = objData.map(function(o) { return o.objeto; });
             const data = objData.map(function(o) { return o.monto_adjudicado; });
 
@@ -713,7 +731,7 @@
             });
         }
 
-        // 4. Bar Chart: Sistema de Contratación (Min Bar Height Added for Small Values)
+        // 4. Bar Chart: Sistema de Contratación
         function renderSistemaChart() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('sistemaChart');
@@ -721,7 +739,7 @@
             const ctx = el.getContext('2d');
             if (sistemaChartInstance) sistemaChartInstance.destroy();
 
-            const sisData = rawData.sistema_contratacion || [];
+            const sisData = getFilteredDataset('sistema_contratacion', 'sistema_contratacion_anio');
             const labels = sisData.map(function(s) { return s.sistema; });
             const data = sisData.map(function(s) { return s.monto_adjudicado; });
 
@@ -734,7 +752,7 @@
                         data: data,
                         backgroundColor: '#818cf8',
                         borderRadius: 6,
-                        minBarLength: 14 /* Ensures small bars like Tarifas, Porcentajes, Honorario are clearly visible and clickable */
+                        minBarLength: 14
                     }]
                 },
                 options: {
