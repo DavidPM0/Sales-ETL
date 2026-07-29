@@ -1,0 +1,10 @@
+# Ignore database scripts, raw text exports, archives and temporary files
+*.sql
+*.txt
+*.rar
+*.zip
+*.docx
+*.js
+inspect_*.sql
+test_*.sql
+verify_json.js
