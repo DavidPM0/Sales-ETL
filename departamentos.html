@@ -616,10 +616,16 @@
         function filterData() {
             if (!rawData || !rawData.departamentos) return;
 
+            const fAnio = document.getElementById('filterAnio').value;
             const fDep = document.getElementById('filterDepartamento').value;
             const search = document.getElementById('searchInput').value.toLowerCase();
 
-            filteredDepartamentos = rawData.departamentos.filter(function(d) {
+            let sourceData = rawData.departamentos;
+            if (fAnio && rawData.departamentos_anio) {
+                sourceData = rawData.departamentos_anio.filter(function(d) { return d.anio === fAnio; });
+            }
+
+            filteredDepartamentos = sourceData.filter(function(d) {
                 if (fDep && d.departamento !== fDep) return false;
                 if (search && !d.departamento.toLowerCase().includes(search)) return false;
                 return true;
@@ -654,18 +660,18 @@
             let grandConv = 0, grandAdj = 0, grandMontoConv = 0, grandMontoAdj = 0;
 
             filteredDepartamentos.forEach(function(d) {
-                grandConv += d.convocatorias;
-                grandAdj += d.adjudicados;
-                grandMontoConv += d.monto_convocatoria;
-                grandMontoAdj += d.monto_adjudicado;
+                grandConv += (d.convocatorias || 0);
+                grandAdj += (d.adjudicados || 0);
+                grandMontoConv += (d.monto_convocatoria || 0);
+                grandMontoAdj += (d.monto_adjudicado || 0);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = 
                     '<td style="font-weight: 600; text-transform: uppercase;">' + d.departamento + '</td>' +
-                    '<td class="num-col">' + formatNumber(d.convocatorias) + '</td>' +
-                    '<td class="num-col" style="color: var(--accent-purple);">' + formatCurrency(d.monto_convocatoria) + '</td>' +
-                    '<td class="num-col">' + formatNumber(d.adjudicados) + '</td>' +
-                    '<td class="num-col" style="color: var(--accent-blue); font-weight: 600;">' + formatCurrency(d.monto_adjudicado) + '</td>';
+                    '<td class="num-col">' + formatNumber(d.convocatorias || 0) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-purple);">' + formatCurrency(d.monto_convocatoria || 0) + '</td>' +
+                    '<td class="num-col">' + formatNumber(d.adjudicados || 0) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-blue); font-weight: 600;">' + formatCurrency(d.monto_adjudicado || 0) + '</td>';
                 tbody.appendChild(tr);
             });
 

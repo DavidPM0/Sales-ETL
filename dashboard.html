@@ -664,8 +664,9 @@
         }
 
         function filterData() {
-            if (!rawData || !rawData.entidades) return;
+            if (!rawData) return;
 
+            const fAnio = document.getElementById('filterAnio').value;
             const fTipo = document.getElementById('filterTipoEntidad').value;
             const fEnt = document.getElementById('filterEntidad').value;
             const fSec = document.getElementById('filterSector').value;
@@ -674,7 +675,11 @@
             const fDist = document.getElementById('filterDistrito').value;
             const search = document.getElementById('searchInput').value.toLowerCase();
 
-            filteredEntidades = rawData.entidades.filter(function(e) {
+            // If an explicit year is selected and entidades_anio is present, use entidades_anio dataset
+            let sourceData = (fAnio && rawData.entidades_anio && rawData.entidades_anio.length > 0) ? rawData.entidades_anio : rawData.entidades;
+
+            filteredEntidades = (sourceData || []).filter(function(e) {
+                if (fAnio && e.anio && e.anio !== fAnio) return false;
                 if (fTipo && e.tipo_entidad !== fTipo) return false;
                 if (fEnt && e.entidad !== fEnt) return false;
                 if (fSec && e.sector !== fSec) return false;
