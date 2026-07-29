@@ -576,7 +576,7 @@
             }
         }
 
-        // 1. Doughnut Chart: Top 5 Grupos CUBSO
+        // 1. Doughnut Chart: Top 5 Grupos CUBSO (Colors ordered by rank: Sky Blue, Indigo, Emerald Green, Orange, Purple)
         function renderCubsoDoughnut() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('cubsoDoughnutChart');
@@ -588,7 +588,8 @@
             const labels = top5.map(function(g) { return g.grupo; });
             const data = top5.map(function(g) { return g.monto_adjudicado; });
 
-            const colors = ['#facc15', '#34d399', '#38bdf8', '#f87171', '#c084fc'];
+            // Design system palette ordered by largest to smallest percentage: #38bdf8, #818cf8, #34d399, #fb923c, #c084fc
+            const colors = ['#38bdf8', '#818cf8', '#34d399', '#fb923c', '#c084fc'];
 
             cubsoChartInstance = new Chart(ctx, {
                 type: 'doughnut',
@@ -689,7 +690,7 @@
             });
         }
 
-        // 3. Pie Chart: Objeto Contractual (Obra, Servicio, Bien, Consultoria)
+        // 3. Pie Chart: Objeto Contractual (Colors ordered by rank: #38bdf8, #818cf8, #34d399, #fb923c)
         function renderObjetoChart() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('objetoChart');
@@ -701,13 +702,16 @@
             const labels = objData.map(function(o) { return o.objeto; });
             const data = objData.map(function(o) { return o.monto_adjudicado; });
 
+            // Design system palette ordered by rank: Sky Blue (Obra), Indigo (Servicio), Emerald Green (Bien), Orange (Consultoría)
+            const colors = ['#38bdf8', '#818cf8', '#34d399', '#fb923c'];
+
             objetoChartInstance = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#38bdf8', '#818cf8', '#34d399', '#fb923c'],
+                        backgroundColor: colors,
                         borderColor: '#1e293b',
                         borderWidth: 2
                     }]

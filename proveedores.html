@@ -461,7 +461,7 @@
         <!-- Left: Radar de Eficiencia por Tipo de Proceso -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">🎯 Radar de Eficiencia por Tipo de Proceso de Selección</div>
+                <div class="card-title">Radar de Eficiencia por Tipo de Proceso de Selección</div>
             </div>
             <div class="chart-box">
                 <canvas id="procesoRadarChart"></canvas>
@@ -471,7 +471,7 @@
         <!-- Right: Polar Area Chart Tipo de Proveedor -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">🌐 Distribución por Tipo de Proveedor</div>
+                <div class="card-title">Distribución por Tipo de Proveedor</div>
             </div>
             <div class="chart-box">
                 <canvas id="tipoProveedorPolarChart"></canvas>
@@ -484,7 +484,7 @@
         <!-- Left: Horizontal Bar Top 10 Proveedores -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">📊 Top 10 Proveedores con Mayor Monto Adjudicado</div>
+                <div class="card-title">Top 10 Proveedores con Mayor Monto Adjudicado</div>
             </div>
             <div class="chart-box">
                 <canvas id="topProveedoresBarChart"></canvas>
@@ -494,7 +494,7 @@
         <!-- Right: Normativa y Régimen Legal -->
         <div class="card">
             <div class="card-header">
-                <div class="card-title">📜 Distribución por Normativa y Régimen Legal</div>
+                <div class="card-title">Distribución por Normativa y Régimen Legal</div>
             </div>
             <div class="chart-box">
                 <canvas id="normativaDoughnutChart"></canvas>
@@ -505,7 +505,7 @@
     <!-- Section 3: Interactive Suppliers Table -->
     <div class="card">
         <div class="card-header">
-            <div class="card-title">🔍 Directorio de Proveedores y Contratistas del Estado</div>
+            <div class="card-title">Directorio de Proveedores y Contratistas del Estado</div>
             <span id="rowCount" style="font-size: 0.75rem; color: var(--text-muted);">0 proveedores</span>
         </div>
         <div class="table-search">
@@ -755,7 +755,7 @@
             });
         }
 
-        // 2. Polar Area Chart: Tipo de Proveedor
+        // 2. Polar Area Chart: Tipo de Proveedor (Colors ordered by rank: Sky Blue, Indigo, Emerald Green)
         function renderTipoProveedorPolarChart() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('tipoProveedorPolarChart');
@@ -774,9 +774,9 @@
                     datasets: [{
                         data: data,
                         backgroundColor: [
-                            'rgba(56, 189, 248, 0.7)',
-                            'rgba(129, 140, 248, 0.7)',
-                            'rgba(52, 211, 153, 0.7)'
+                            'rgba(56, 189, 248, 0.75)',
+                            'rgba(129, 140, 248, 0.75)',
+                            'rgba(52, 211, 153, 0.75)'
                         ],
                         borderColor: '#1e293b',
                         borderWidth: 2
@@ -863,7 +863,7 @@
             });
         }
 
-        // 4. Doughnut Chart: Normativa y Régimen Legal
+        // 4. Doughnut Chart: Normativa y Régimen Legal (Colors ordered by rank: Sky Blue, Indigo, Emerald Green, Orange, Purple)
         function renderNormativaDoughnutChart() {
             if (typeof Chart === 'undefined') return;
             const el = document.getElementById('normativaDoughnutChart');
@@ -875,13 +875,16 @@
             const labels = normData.map(function(n) { return n.normativa.length > 30 ? n.normativa.substring(0, 30) + '...' : n.normativa; });
             const data = normData.map(function(n) { return n.convocatorias; });
 
+            // Colors ordered by rank: Sky Blue (#38bdf8), Indigo (#818cf8), Emerald Green (#34d399), Orange (#fb923c), Purple (#c084fc)
+            const colors = ['#38bdf8', '#818cf8', '#34d399', '#fb923c', '#c084fc'];
+
             doughnutChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#38bdf8', '#818cf8', '#34d399', '#facc15', '#f87171'],
+                        backgroundColor: colors,
                         borderColor: '#1e293b',
                         borderWidth: 3
                     }]
