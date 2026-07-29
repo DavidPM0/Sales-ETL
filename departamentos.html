@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales ETL - Análisis por Departamento</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-purple: #818cf8;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --gradient-card: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tab {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        header .badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        /* Filter Controls */
+        .filters-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .filter-group select {
+            background: #0f172a;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-group select:hover, .filter-group select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Dashboard 3-Column Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2.2fr 1.4fr 1fr;
+            gap: 20px;
+        }
+
+        /* Card Container */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .card-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Table Styling */
+        .table-container {
+            overflow-x: auto;
+            flex: 1;
+            max-height: 650px;
+            overflow-y: auto;
+        }
+
+        .table-search {
+            margin-bottom: 12px;
+        }
+
+        .table-search input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .table-search input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 10px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--accent-blue);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        tr.total-row {
+            background: #0f172a;
+            font-weight: 700;
+            border-top: 2px solid var(--accent-blue);
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        tr.total-row td {
+            color: var(--accent-blue);
+        }
+
+        .num-col {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Top 5 Grouped Year View */
+        .year-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .year-group-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .top5-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .top5-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(56, 189, 248, 0.15);
+            z-index: 1;
+            border-radius: 6px;
+        }
+
+        .top5-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            z-index: 2;
+            text-transform: uppercase;
+        }
+
+        .top5-val {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            z-index: 2;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingMsg" style="color: var(--text-secondary); font-size: 0.9rem;">Cargando datos por departamento...</p>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <h1>Sales ETL - Dashboard</h1>
+        <nav class="nav-tabs">
+            <a href="dashboard.html" class="nav-tab">Convocatoria vs Adjudicados</a>
+            <a href="departamentos.html" class="nav-tab active">Top</a>
+            <a href="mapa.html" class="nav-tab">Mapa</a>
+        </nav>
+        <span class="badge">Oracle 19c / PDB ORCLPDB1 / usr_etl</span>
+    </header>
+
+    <!-- Filters Container -->
+    <div class="filters-container">
+        <div class="filter-group">
+            <label for="filterAnio">Año</label>
+            <select id="filterAnio"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterMes">Mes</label>
+            <select id="filterMes"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterTipoEntidad">Tipo Entidad</label>
+            <select id="filterTipoEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterEntidad">Entidad</label>
+            <select id="filterEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterSector">Sector</label>
+            <select id="filterSector"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDepartamento">Departamento</label>
+            <select id="filterDepartamento"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterProvincia">Provincia</label>
+            <select id="filterProvincia"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDistrito">Distrito</label>
+            <select id="filterDistrito"><option value="">Todas</option></select>
+        </div>
+    </div>
+
+    <!-- Main 3-Column Grid -->
+    <div class="dashboard-grid">
+        <!-- Column 1: Departamento Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>Departamento</span>
+                </div>
+                <span id="rowCount" style="font-size: 0.75rem; color: var(--text-muted);">0 departamentos</span>
+            </div>
+            <div class="table-search">
+                <input type="text" id="searchInput" placeholder="Buscar departamento por nombre...">
+            </div>
+            <div class="table-container">
+                <table id="depTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('departamento')">Departamento ⇕</th>
+                            <th class="num-col" onclick="sortTable('convocatorias')">Convocatorias ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_convocatoria')">Monto Convocatoria ⇕</th>
+                            <th class="num-col" onclick="sortTable('adjudicados')">Adjudicados ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_adjudicado')">Monto Adjudicado ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="depBody">
+                        <!-- Dynamic department rows -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row" id="depTotalRow">
+                            <td>Total</td>
+                            <td class="num-col" id="totConv">0</td>
+                            <td class="num-col" id="totMontoConv">S/ 0.00</td>
+                            <td class="num-col" id="totAdj">0</td>
+                            <td class="num-col" id="totMontoAdj">S/ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Column 2: TOP 5 - Todos los Años / Monto Adjudicado -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>TOP 5 - Todos los Años</span>
+                    <span class="card-subtitle">Monto Adjudicado</span>
+                </div>
+            </div>
+            <div class="table-container" id="top5Container">
+                <!-- Grouped years dynamic list -->
+            </div>
+        </div>
+
+        <!-- Column 3: Lima - Todos los Años / Monto Adjudicado -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>Lima - Todos los Años</span>
+                    <span class="card-subtitle">Monto Adjudicado</span>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Año ⇕</th>
+                            <th class="num-col">Monto Adjudicado ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="limaBody">
+                        <!-- Lima rows per year -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td>Total</td>
+                            <td class="num-col" id="limaTotal">S/ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        let rawData = null;
+        let filteredDepartamentos = [];
+        let sortKey = 'monto_adjudicado';
+        let sortAsc = false;
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(val || 0);
+        }
+
+        function formatNumber(val) {
+            return new Intl.NumberFormat('es-PE').format(val || 0);
+        }
+
+        function hideLoading() {
+            const ov = document.getElementById('loadingOverlay');
+            if (ov) {
+                ov.style.opacity = '0';
+                setTimeout(function() { ov.style.display = 'none'; }, 300);
+            }
+        }
+
+        function render(d) {
+            try {
+                if (!d) {
+                    console.error('Datos vacios:', d);
+                    hideLoading();
+                    return;
+                }
+                rawData = d;
+                populateFilterDropdowns();
+                setupEventListeners();
+                updateView();
+                hideLoading();
+            } catch (err) {
+                console.error('Error rendering departamentos view:', err);
+                hideLoading();
+            }
+        }
+
+        function populateFilterDropdowns() {
+            if (!rawData) return;
+
+            function populateSelect(id, items) {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Todas</option>';
+                items.filter(Boolean).sort().forEach(function(item) {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    sel.appendChild(opt);
+                });
+                sel.value = currentVal;
+            }
+
+            const aniosSet = new Set((rawData.anios || []).map(function(a) { return a.anio; }));
+            populateSelect('filterAnio', Array.from(aniosSet));
+
+            const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            populateSelect('filterMes', meses);
+
+            const tiposSet = new Set((rawData.entidades || []).map(function(e) { return e.tipo_entidad; }));
+            populateSelect('filterTipoEntidad', Array.from(tiposSet));
+
+            const sectoresSet = new Set((rawData.sectores || []).map(function(s) { return s.sector; }));
+            populateSelect('filterSector', Array.from(sectoresSet));
+
+            const depSet = new Set((rawData.departamentos || []).map(function(d) { return d.departamento; }));
+            populateSelect('filterDepartamento', Array.from(depSet));
+
+            const provSet = new Set((rawData.entidades || []).map(function(e) { return e.provincia; }));
+            populateSelect('filterProvincia', Array.from(provSet));
+
+            const distSet = new Set((rawData.entidades || []).map(function(e) { return e.distrito; }));
+            populateSelect('filterDistrito', Array.from(distSet));
+
+            const entSet = new Set((rawData.entidades || []).map(function(e) { return e.entidad; }));
+            populateSelect('filterEntidad', Array.from(entSet));
+        }
+
+        function setupEventListeners() {
+            const filterIds = ['filterAnio', 'filterMes', 'filterTipoEntidad', 'filterEntidad', 'filterSector', 'filterDepartamento', 'filterProvincia', 'filterDistrito'];
+            filterIds.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', function() { updateView(); });
+            });
+
+            const sIn = document.getElementById('searchInput');
+            if (sIn) sIn.addEventListener('input', function() { renderDepTable(); });
+        }
+
+        function updateView() {
+            filterData();
+            renderDepTable();
+            renderTop5();
+            renderLimaTable();
+        }
+
+        function filterData() {
+            if (!rawData || !rawData.departamentos) return;
+
+            const fDep = document.getElementById('filterDepartamento').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredDepartamentos = rawData.departamentos.filter(function(d) {
+                if (fDep && d.departamento !== fDep) return false;
+                if (search && !d.departamento.toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function sortTable(key) {
+            if (sortKey === key) {
+                sortAsc = !sortAsc;
+            } else {
+                sortKey = key;
+                sortAsc = false;
+            }
+            renderDepTable();
+        }
+
+        function renderDepTable() {
+            const tbody = document.getElementById('depBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            filteredDepartamentos.sort(function(a, b) {
+                let vA = a[sortKey];
+                let vB = b[sortKey];
+                if (typeof vA === 'string') vA = vA.toLowerCase();
+                if (typeof vB === 'string') vB = vB.toLowerCase();
+                if (vA < vB) return sortAsc ? -1 : 1;
+                if (vA > vB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            let grandConv = 0, grandAdj = 0, grandMontoConv = 0, grandMontoAdj = 0;
+
+            filteredDepartamentos.forEach(function(d) {
+                grandConv += d.convocatorias;
+                grandAdj += d.adjudicados;
+                grandMontoConv += d.monto_convocatoria;
+                grandMontoAdj += d.monto_adjudicado;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = 
+                    '<td style="font-weight: 600; text-transform: uppercase;">' + d.departamento + '</td>' +
+                    '<td class="num-col">' + formatNumber(d.convocatorias) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-purple);">' + formatCurrency(d.monto_convocatoria) + '</td>' +
+                    '<td class="num-col">' + formatNumber(d.adjudicados) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-blue); font-weight: 600;">' + formatCurrency(d.monto_adjudicado) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totConv').textContent = formatNumber(grandConv);
+            document.getElementById('totAdj').textContent = formatNumber(grandAdj);
+            document.getElementById('totMontoConv').textContent = formatCurrency(grandMontoConv);
+            document.getElementById('totMontoAdj').textContent = formatCurrency(grandMontoAdj);
+            document.getElementById('rowCount').textContent = filteredDepartamentos.length + ' departamentos';
+        }
+
+        function renderTop5() {
+            const container = document.getElementById('top5Container');
+            if (!container || !rawData.top5_anios) return;
+            container.innerHTML = '';
+
+            const selectedAnio = document.getElementById('filterAnio').value;
+
+            let yearsToDisplay = rawData.top5_anios;
+            if (selectedAnio) {
+                yearsToDisplay = yearsToDisplay.filter(function(y) { return y.anio === selectedAnio; });
+            }
+
+            yearsToDisplay.forEach(function(yGroup) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'year-group';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'year-group-title';
+                titleDiv.innerHTML = 
+                    '<span>' + yGroup.anio + '</span>' +
+                    '<span style="font-size: 0.8rem; color: var(--text-primary); font-variant-numeric: tabular-nums;">' + formatCurrency(yGroup.total_monto_adjudicado) + '</span>';
+                groupDiv.appendChild(titleDiv);
+
+                const maxVal = yGroup.top5.length > 0 ? yGroup.top5[0].monto_adjudicado : 1;
+
+                yGroup.top5.forEach(function(item) {
+                    const pct = Math.min(100, Math.max(5, (item.monto_adjudicado / maxVal) * 100));
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'top5-item';
+                    itemDiv.innerHTML = 
+                        '<div class="top5-bar" style="width: ' + pct + '%;"></div>' +
+                        '<span class="top5-name">' + item.departamento + '</span>' +
+                        '<span class="top5-val">' + formatCurrency(item.monto_adjudicado) + '</span>';
+                    groupDiv.appendChild(itemDiv);
+                });
+
+                container.appendChild(groupDiv);
+            });
+        }
+
+        function renderLimaTable() {
+            const tbody = document.getElementById('limaBody');
+            if (!tbody || !rawData.lima_anios) return;
+            tbody.innerHTML = '';
+
+            const selectedAnio = document.getElementById('filterAnio').value;
+
+            let limaData = rawData.lima_anios;
+            if (selectedAnio) {
+                limaData = limaData.filter(function(l) { return l.anio === selectedAnio; });
+            }
+
+            let totalLima = 0;
+            limaData.forEach(function(l) {
+                totalLima += l.monto_adjudicado;
+                const tr = document.createElement('tr');
+                tr.innerHTML = 
+                    '<td style="font-weight: 600; color: var(--accent-blue);">' + l.anio + '</td>' +
+                    '<td class="num-col" style="font-weight: 600;">' + formatCurrency(l.monto_adjudicado) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('limaTotal').textContent = formatCurrency(totalLima);
+        }
+
+        // Fetch external data.json
+        fetch('data.json')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { render(d); })
+            .catch(function(err) {
+                console.error('Error cargando data.json:', err);
+                const msg = document.getElementById('loadingMsg');
+                if (msg) {
+                    msg.textContent = 'Error: No se pudo cargar data.json.';
+                }
+            });
+    </script>
+</body>
+</html>

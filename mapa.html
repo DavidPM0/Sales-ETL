@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales ETL - Mapa Geográfico</title>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-purple: #818cf8;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --gradient-card: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        .leaflet-tile-pane {
+            filter: invert(15%) sepia(100%) saturate(200%) hue-rotate(190deg) brightness(51%) contrast(100%);
+        }
+        
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tab {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        header .badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        /* Filter Controls */
+        .filters-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .filter-group select {
+            background: #0f172a;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-group select:hover, .filter-group select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+        }
+
+        /* Card Container */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .map-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Table Styling */
+        .table-container {
+            overflow-x: auto;
+            flex: 1;
+            max-height: 650px;
+            overflow-y: auto;
+        }
+
+        .table-search {
+            margin-bottom: 12px;
+        }
+
+        .table-search input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .table-search input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 10px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--accent-blue);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        tr.total-row {
+            background: #0f172a;
+            font-weight: 700;
+            border-top: 2px solid var(--accent-blue);
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        tr.total-row td {
+            color: var(--accent-blue);
+        }
+
+        .num-col {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Leaflet Map Container & Ocean Background Color */
+        #map, .leaflet-container {
+            width: 100%;
+            flex: 1;
+            min-height: 650px;
+            border-radius: 8px;
+            background-color: #1e293b !important;
+        }
+
+        /* Custom Professional Leaflet Popup Styling */
+        .leaflet-popup-content-wrapper {
+            background: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #334155 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .leaflet-popup-content {
+            margin: 0 !important;
+            line-height: 1.4 !important;
+        }
+
+        .leaflet-popup-tip {
+            background: #1e293b !important;
+            border: 1px solid #334155 !important;
+        }
+
+        /* Perfectly Positioned & Aligned Close Button */
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #94a3b8 !important;
+            top: 12px !important;
+            right: 14px !important;
+            padding: 4px !important;
+            font-size: 16px !important;
+            line-height: 1 !important;
+            width: 22px !important;
+            height: 22px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 6px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: #38bdf8 !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .custom-popup {
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 230px;
+        }
+
+        .popup-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+            padding-right: 24px; /* Space to avoid close button overlap */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            color: #94a3b8;
+        }
+
+        .popup-value {
+            font-weight: 600;
+            color: #f8fafc;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .popup-total-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 4px;
+        }
+
+        .popup-total-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .popup-total-val {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #34d399;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            #map {
+                min-height: 480px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingMsg" style="color: var(--text-secondary); font-size: 0.9rem;">Cargando mapa geográfico...</p>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <h1>Sales ETL - Dashboard</h1>
+        <nav class="nav-tabs">
+            <a href="dashboard.html" class="nav-tab">Convocatoria vs Adjudicados</a>
+            <a href="departamentos.html" class="nav-tab">Top</a>
+            <a href="mapa.html" class="nav-tab active">Mapa</a>
+        </nav>
+        <span class="badge">Oracle 19c / PDB ORCLPDB1 / usr_etl</span>
+    </header>
+
+    <!-- Filters Container -->
+    <div class="filters-container">
+        <div class="filter-group">
+            <label for="filterAnio">Año</label>
+            <select id="filterAnio"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterMes">Mes</label>
+            <select id="filterMes"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterTipoEntidad">Tipo Entidad</label>
+            <select id="filterTipoEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterEntidad">Entidad</label>
+            <select id="filterEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterSector">Sector</label>
+            <select id="filterSector"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDepartamento">Departamento</label>
+            <select id="filterDepartamento"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterProvincia">Provincia</label>
+            <select id="filterProvincia"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDistrito">Distrito</label>
+            <select id="filterDistrito"><option value="">Todas</option></select>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Table: Departamento breakdown -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Departamento</div>
+                <span id="rowCount" style="font-size: 0.75rem; color: var(--text-muted);">0 departamentos</span>
+            </div>
+            <div class="table-search">
+                <input type="text" id="searchInput" placeholder="Buscar departamento por nombre...">
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('departamento')">Departamento ⇕</th>
+                            <th class="num-col" onclick="sortTable('convocatorias')">Convocatorias ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_convocatoria')">Monto Convocatoria ⇕</th>
+                            <th class="num-col" onclick="sortTable('adjudicados')">Adjudicados ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_adjudicado')">Monto Adjudicado ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="depBody">
+                        <!-- Dynamic department rows -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td>Total</td>
+                            <td class="num-col" id="totConv">0</td>
+                            <td class="num-col" id="totMontoConv">S/ 0.00</td>
+                            <td class="num-col" id="totAdj">0</td>
+                            <td class="num-col" id="totMontoAdj">S/ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Map -->
+        <div class="card map-card">
+            <div class="card-header">
+                <div class="card-title">Mapa Geográfico de Contrataciones por Departamento</div>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        let rawData = null;
+        let filteredDepartamentos = [];
+        let sortKey = 'monto_adjudicado';
+        let sortAsc = false;
+        let mapInstance = null;
+        let circleMarkers = [];
+
+        // Exact Coordinates for Peru Departments
+        const depCoordinates = {
+            'LIMA': [-12.0464, -77.0428, '#38bdf8'],
+            'PIURA': [-5.1945, -80.6328, '#818cf8'],
+            'LA LIBERTAD': [-8.1160, -79.0300, '#fb923c'],
+            'AREQUIPA': [-16.4090, -71.5375, '#c084fc'],
+            'JUNIN': [-11.1582, -75.9928, '#f472b6'],
+            'CAJAMARCA': [-7.1617, -78.5128, '#60a5fa'],
+            'ANCASH': [-9.5261, -77.5289, '#facc15'],
+            'LORETO': [-3.7491, -73.2538, '#4ade80'],
+            'CUSCO': [-13.5320, -71.9675, '#34d399'],
+            'ICA': [-14.0678, -75.7286, '#a78bfa'],
+            'AYACUCHO': [-13.1588, -74.2239, '#f87171'],
+            'LAMBAYEQUE': [-6.7714, -79.8409, '#38bdf8'],
+            'SAN MARTIN': [-6.4859, -76.3686, '#2dd4bf'],
+            'CALLAO': [-12.0566, -77.1181, '#fbbf24'],
+            'PUNO': [-15.8402, -70.0219, '#e879f9'],
+            'HUANUCO': [-9.9306, -76.2422, '#818cf8'],
+            'HUANCAVELICA': [-12.7826, -74.9727, '#f43f5e'],
+            'PASCO': [-10.6675, -76.2567, '#10b981'],
+            'UCAYALI': [-8.3791, -74.5539, '#06b6d4'],
+            'AMAZONAS': [-6.2317, -77.8690, '#a855f7'],
+            'TACNA': [-18.0066, -70.2463, '#ec4899'],
+            'APURIMAC': [-13.6339, -72.8814, '#f59e0b'],
+            'TUMBES': [-3.5669, -80.4515, '#84cc16'],
+            'MOQUEGUA': [-17.1983, -70.9357, '#6366f1'],
+            'MADRE DE DIOS': [-12.5933, -69.1891, '#14b8a6']
+        };
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(val || 0);
+        }
+
+        function formatNumber(val) {
+            return new Intl.NumberFormat('es-PE').format(val || 0);
+        }
+
+        function hideLoading() {
+            const ov = document.getElementById('loadingOverlay');
+            if (ov) {
+                ov.style.opacity = '0';
+                setTimeout(function() { ov.style.display = 'none'; }, 300);
+            }
+        }
+
+        function initMap() {
+            if (mapInstance) return;
+
+            // Initialize Leaflet Map with smooth zoom
+            mapInstance = L.map('map', {
+                zoomSnap: 0.1
+            });
+
+            // Exact bounding box of Peru to show all departments up front
+            const peruBounds = [
+                [-18.35, -81.33], // SW
+                [-0.04, -68.65]   // NE
+            ];
+            mapInstance.fitBounds(peruBounds, { padding: [15, 15] });
+
+            // Dark Matter CartoDB tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 18
+            }).addTo(mapInstance);
+        }
+
+        function render(d) {
+            try {
+                if (!d) {
+                    console.error('Datos vacios:', d);
+                    hideLoading();
+                    return;
+                }
+                rawData = d;
+                initMap();
+                populateFilterDropdowns();
+                setupEventListeners();
+                updateView();
+                hideLoading();
+            } catch (err) {
+                console.error('Error rendering mapa view:', err);
+                hideLoading();
+            }
+        }
+
+        function populateFilterDropdowns() {
+            if (!rawData) return;
+
+            function populateSelect(id, items) {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Todas</option>';
+                items.filter(Boolean).sort().forEach(function(item) {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    sel.appendChild(opt);
+                });
+                sel.value = currentVal;
+            }
+
+            const aniosSet = new Set((rawData.anios || []).map(function(a) { return a.anio; }));
+            populateSelect('filterAnio', Array.from(aniosSet));
+
+            const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            populateSelect('filterMes', meses);
+
+            const tiposSet = new Set((rawData.entidades || []).map(function(e) { return e.tipo_entidad; }));
+            populateSelect('filterTipoEntidad', Array.from(tiposSet));
+
+            const sectoresSet = new Set((rawData.sectores || []).map(function(s) { return s.sector; }));
+            populateSelect('filterSector', Array.from(sectoresSet));
+
+            const depSet = new Set((rawData.departamentos || []).map(function(d) { return d.departamento; }));
+            populateSelect('filterDepartamento', Array.from(depSet));
+
+            const provSet = new Set((rawData.entidades || []).map(function(e) { return e.provincia; }));
+            populateSelect('filterProvincia', Array.from(provSet));
+
+            const distSet = new Set((rawData.entidades || []).map(function(e) { return e.distrito; }));
+            populateSelect('filterDistrito', Array.from(distSet));
+
+            const entSet = new Set((rawData.entidades || []).map(function(e) { return e.entidad; }));
+            populateSelect('filterEntidad', Array.from(entSet));
+        }
+
+        function setupEventListeners() {
+            const filterIds = ['filterAnio', 'filterMes', 'filterTipoEntidad', 'filterEntidad', 'filterSector', 'filterDepartamento', 'filterProvincia', 'filterDistrito'];
+            filterIds.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', function() { updateView(); });
+            });
+
+            const sIn = document.getElementById('searchInput');
+            if (sIn) sIn.addEventListener('input', function() { renderDepTable(); });
+        }
+
+        function updateView() {
+            filterData();
+            renderDepTable();
+            renderMapMarkers();
+        }
+
+        function filterData() {
+            if (!rawData || !rawData.departamentos) return;
+
+            const fDep = document.getElementById('filterDepartamento').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredDepartamentos = rawData.departamentos.filter(function(d) {
+                if (fDep && d.departamento !== fDep) return false;
+                if (search && !d.departamento.toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function sortTable(key) {
+            if (sortKey === key) {
+                sortAsc = !sortAsc;
+            } else {
+                sortKey = key;
+                sortAsc = false;
+            }
+            renderDepTable();
+        }
+
+        function renderDepTable() {
+            const tbody = document.getElementById('depBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            filteredDepartamentos.sort(function(a, b) {
+                let vA = a[sortKey];
+                let vB = b[sortKey];
+                if (typeof vA === 'string') vA = vA.toLowerCase();
+                if (typeof vB === 'string') vB = vB.toLowerCase();
+                if (vA < vB) return sortAsc ? -1 : 1;
+                if (vA > vB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            let grandConv = 0, grandAdj = 0, grandMontoConv = 0, grandMontoAdj = 0;
+
+            filteredDepartamentos.forEach(function(d) {
+                grandConv += d.convocatorias;
+                grandAdj += d.adjudicados;
+                grandMontoConv += d.monto_convocatoria;
+                grandMontoAdj += d.monto_adjudicado;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = 
+                    '<td style="font-weight: 600; text-transform: uppercase;">' + d.departamento + '</td>' +
+                    '<td class="num-col">' + formatNumber(d.convocatorias) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-purple);">' + formatCurrency(d.monto_convocatoria) + '</td>' +
+                    '<td class="num-col">' + formatNumber(d.adjudicados) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-blue); font-weight: 600;">' + formatCurrency(d.monto_adjudicado) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totConv').textContent = formatNumber(grandConv);
+            document.getElementById('totAdj').textContent = formatNumber(grandAdj);
+            document.getElementById('totMontoConv').textContent = formatCurrency(grandMontoConv);
+            document.getElementById('totMontoAdj').textContent = formatCurrency(grandMontoAdj);
+            document.getElementById('rowCount').textContent = filteredDepartamentos.length + ' departamentos';
+        }
+
+        function renderMapMarkers() {
+            if (!mapInstance) return;
+
+            // Clear previous markers
+            circleMarkers.forEach(function(m) { mapInstance.removeLayer(m); });
+            circleMarkers = [];
+
+            const maxMonto = filteredDepartamentos.length > 0 ? Math.max(...filteredDepartamentos.map(d => d.monto_adjudicado)) : 1;
+
+            filteredDepartamentos.forEach(function(d) {
+                const name = d.departamento.toUpperCase();
+                const coords = depCoordinates[name];
+                if (coords) {
+                    const lat = coords[0];
+                    const lng = coords[1];
+                    const color = coords[2] || '#38bdf8';
+
+                    const radius = Math.max(8, Math.min(45, (d.monto_adjudicado / maxMonto) * 45));
+
+                    const marker = L.circleMarker([lat, lng], {
+                        radius: radius,
+                        fillColor: color,
+                        color: '#ffffff',
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillOpacity: 0.6
+                    }).addTo(mapInstance);
+
+                    const tooltipContent = 
+                        '<div class="custom-popup">' +
+                            '<div class="popup-title">' +
+                                '<span>' + d.departamento + '</span>' +
+                            '</div>' +
+                            '<div class="popup-row">' +
+                                '<span>Convocatorias</span>' +
+                                '<span class="popup-value">' + formatNumber(d.convocatorias) + '</span>' +
+                            '</div>' +
+                            '<div class="popup-row">' +
+                                '<span>Adjudicados</span>' +
+                                '<span class="popup-value" style="color: var(--accent-purple);">' + formatNumber(d.adjudicados) + '</span>' +
+                            '</div>' +
+                            '<div class="popup-row">' +
+                                '<span>Monto Convocatoria</span>' +
+                                '<span class="popup-value" style="color: var(--accent-purple);">' + formatCurrency(d.monto_convocatoria) + '</span>' +
+                            '</div>' +
+                            '<div class="popup-total-box">' +
+                                '<span class="popup-total-label">Monto Adjudicado Total</span>' +
+                                '<span class="popup-total-val">' + formatCurrency(d.monto_adjudicado) + '</span>' +
+                            '</div>' +
+                        '</div>';
+
+                    marker.bindPopup(tooltipContent);
+                    circleMarkers.push(marker);
+                }
+            });
+        }
+
+        // Fetch external data.json
+        fetch('data.json')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { render(d); })
+            .catch(function(err) {
+                console.error('Error cargando data.json:', err);
+                const msg = document.getElementById('loadingMsg');
+                if (msg) {
+                    msg.textContent = 'Error: No se pudo cargar data.json.';
+                }
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales ETL - Dashboard</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-purple: #818cf8;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --gradient-card: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-tab {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        header .badge {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        /* Filter Controls */
+        .filters-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .filter-group select {
+            background: #0f172a;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-group select:hover, .filter-group select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        /* Card Container */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Table Styling */
+        .table-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            flex: 1;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .table-search {
+            margin-bottom: 12px;
+        }
+
+        .table-search input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .table-search input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 10px 12px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--accent-blue);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-primary);
+        }
+
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        tr.total-row {
+            background: #0f172a;
+            font-weight: 700;
+            border-top: 2px solid var(--accent-blue);
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        tr.total-row td {
+            color: var(--accent-blue);
+        }
+
+        .num-col {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Right Panel Cards Column */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+        }
+
+        .kpi-card.purple::before {
+            background: var(--accent-purple);
+        }
+
+        .kpi-year {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .kpi-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .kpi-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .kpi-badge {
+            align-self: flex-start;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kpi-badge.positive {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .kpi-badge.negative {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        /* Charts Container */
+        .chart-box {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+
+        /* Full Width Bottom Chart */
+        .full-width-card {
+            grid-column: 1 / -1;
+        }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-body);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingMsg" style="color: var(--text-secondary); font-size: 0.9rem;">Cargando datos normalizados...</p>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <h1>Sales ETL - Dashboard</h1>
+        <nav class="nav-tabs">
+            <a href="dashboard.html" class="nav-tab active">Convocatoria vs Adjudicados</a>
+            <a href="departamentos.html" class="nav-tab">Top</a>
+            <a href="mapa.html" class="nav-tab">Mapa</a>
+        </nav>
+        <span class="badge">Oracle 19c / PDB ORCLPDB1 / usr_etl</span>
+    </header>
+
+    <!-- Filters Container -->
+    <div class="filters-container">
+        <div class="filter-group">
+            <label for="filterAnio">Año</label>
+            <select id="filterAnio"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterMes">Mes</label>
+            <select id="filterMes"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterTipoEntidad">Tipo Entidad</label>
+            <select id="filterTipoEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterEntidad">Entidad</label>
+            <select id="filterEntidad"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterSector">Sector</label>
+            <select id="filterSector"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDepartamento">Departamento</label>
+            <select id="filterDepartamento"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterProvincia">Provincia</label>
+            <select id="filterProvincia"><option value="">Todas</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="filterDistrito">Distrito</label>
+            <select id="filterDistrito"><option value="">Todas</option></select>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Table: Entidades -->
+        <div class="card table-card">
+            <div class="card-header">
+                <div class="card-title">Resumen por Entidad Pública</div>
+                <span id="rowCount" style="font-size: 0.75rem; color: var(--text-muted);">0 registros</span>
+            </div>
+            <div class="table-search">
+                <input type="text" id="searchInput" placeholder="Buscar entidad por nombre...">
+            </div>
+            <div class="table-container">
+                <table id="entidadesTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('entidad')">ENTIDAD ⇕</th>
+                            <th class="num-col" onclick="sortTable('convocatorias')">Convocatorias ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_adjudicado')">Monto Adjudicado (S/) ⇕</th>
+                            <th class="num-col" onclick="sortTable('adjudicados')">Adjudicados ⇕</th>
+                            <th class="num-col" onclick="sortTable('monto_convocatoria')">Monto Convocatoria (S/) ⇕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Dynamic rows -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row" id="tableTotal">
+                            <td>TOTAL</td>
+                            <td class="num-col" id="totConv">0</td>
+                            <td class="num-col" id="totMontoAdj">S/ 0.00</td>
+                            <td class="num-col" id="totAdj">0</td>
+                            <td class="num-col" id="totMontoConv">S/ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Right Column Cards -->
+        <div class="right-column">
+            <!-- Center Top Chart: Convocatorias VS Adjudicaciones por Sector -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Convocatorias VS Adjudicaciones por Sector</div>
+                </div>
+                <div class="chart-box" style="height: 220px;">
+                    <canvas id="sectorChart"></canvas>
+                </div>
+            </div>
+
+            <!-- KPI Card 2024 -->
+            <div class="kpi-card" id="kpiCardYear1">
+                <div class="kpi-year" id="kpiTitle1">AÑO 2024</div>
+                <div class="kpi-value-group">
+                    <span class="kpi-value" id="kpiMontoAdj1">S/ 0.00</span>
+                    <span class="kpi-label">Monto Adjudicado</span>
+                </div>
+                <div class="kpi-value-group">
+                    <span class="kpi-value" style="font-size: 1.1rem; color: var(--accent-purple);" id="kpiMontoConv1">S/ 0.00</span>
+                    <span class="kpi-label">Monto Convocatoria</span>
+                </div>
+                <div class="kpi-badge positive" id="kpiVar1">
+                    <span>0%</span> Variación Anual
+                </div>
+            </div>
+
+            <!-- KPI Card 2023 -->
+            <div class="kpi-card purple" id="kpiCardYear2">
+                <div class="kpi-year" id="kpiTitle2">AÑO 2023</div>
+                <div class="kpi-value-group">
+                    <span class="kpi-value" id="kpiMontoAdj2">S/ 0.00</span>
+                    <span class="kpi-label">Monto Adjudicado</span>
+                </div>
+                <div class="kpi-value-group">
+                    <span class="kpi-value" style="font-size: 1.1rem; color: var(--accent-purple);" id="kpiMontoConv2">S/ 0.00</span>
+                    <span class="kpi-label">Monto Convocatoria</span>
+                </div>
+                <div class="kpi-badge positive" id="kpiVar2">
+                    <span>0%</span> Variación Anual
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Bottom Chart: Evolución de Convocatorias (Full Width Row) -->
+        <div class="card full-width-card">
+            <div class="card-header">
+                <div class="card-title">Evolución de Convocatorias y Adjudicaciones</div>
+            </div>
+            <div class="chart-box" style="height: 280px;">
+                <canvas id="evolucionChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        let rawData = null;
+        let filteredEntidades = [];
+        let sortKey = 'convocatorias';
+        let sortAsc = false;
+        let sectorChartInstance = null;
+        let evolucionChartInstance = null;
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(val || 0);
+        }
+
+        function formatNumber(val) {
+            return new Intl.NumberFormat('es-PE').format(val || 0);
+        }
+
+        function hideLoading() {
+            const ov = document.getElementById('loadingOverlay');
+            if (ov) {
+                ov.style.opacity = '0';
+                setTimeout(function() { ov.style.display = 'none'; }, 300);
+            }
+        }
+
+        function render(d) {
+            try {
+                if (!d || !d.entidades) {
+                    console.error('Estructura de datos invalida:', d);
+                    hideLoading();
+                    return;
+                }
+                rawData = d;
+                populateFilterDropdowns();
+                setupEventListeners();
+                updateDashboard();
+                hideLoading();
+            } catch (err) {
+                console.error('Error rendering dashboard:', err);
+                hideLoading();
+            }
+        }
+
+        function populateFilterDropdowns() {
+            if (!rawData) return;
+
+            function populateSelect(id, items) {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Todas</option>';
+                items.filter(Boolean).sort().forEach(function(item) {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    sel.appendChild(opt);
+                });
+                sel.value = currentVal;
+            }
+
+            const aniosSet = new Set((rawData.anios || []).map(function(a) { return a.anio; }));
+            populateSelect('filterAnio', Array.from(aniosSet));
+
+            const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            populateSelect('filterMes', meses);
+
+            const tiposSet = new Set((rawData.entidades || []).map(function(e) { return e.tipo_entidad; }));
+            populateSelect('filterTipoEntidad', Array.from(tiposSet));
+
+            const sectoresSet = new Set((rawData.sectores || []).map(function(s) { return s.sector; }));
+            populateSelect('filterSector', Array.from(sectoresSet));
+
+            const depSet = new Set((rawData.entidades || []).map(function(e) { return e.departamento; }));
+            populateSelect('filterDepartamento', Array.from(depSet));
+
+            const provSet = new Set((rawData.entidades || []).map(function(e) { return e.provincia; }));
+            populateSelect('filterProvincia', Array.from(provSet));
+
+            const distSet = new Set((rawData.entidades || []).map(function(e) { return e.distrito; }));
+            populateSelect('filterDistrito', Array.from(distSet));
+
+            const entSet = new Set((rawData.entidades || []).map(function(e) { return e.entidad; }));
+            populateSelect('filterEntidad', Array.from(entSet));
+        }
+
+        function setupEventListeners() {
+            const filterIds = ['filterAnio', 'filterMes', 'filterTipoEntidad', 'filterEntidad', 'filterSector', 'filterDepartamento', 'filterProvincia', 'filterDistrito'];
+            filterIds.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', function() { updateDashboard(); });
+            });
+
+            const sIn = document.getElementById('searchInput');
+            if (sIn) sIn.addEventListener('input', function() { renderTable(); });
+        }
+
+        function updateDashboard() {
+            filterData();
+            renderTable();
+            renderKPIs();
+            renderSectorChart();
+            renderEvolucionChart();
+        }
+
+        function filterData() {
+            if (!rawData || !rawData.entidades) return;
+
+            const fTipo = document.getElementById('filterTipoEntidad').value;
+            const fEnt = document.getElementById('filterEntidad').value;
+            const fSec = document.getElementById('filterSector').value;
+            const fDep = document.getElementById('filterDepartamento').value;
+            const fProv = document.getElementById('filterProvincia').value;
+            const fDist = document.getElementById('filterDistrito').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredEntidades = rawData.entidades.filter(function(e) {
+                if (fTipo && e.tipo_entidad !== fTipo) return false;
+                if (fEnt && e.entidad !== fEnt) return false;
+                if (fSec && e.sector !== fSec) return false;
+                if (fDep && e.departamento !== fDep) return false;
+                if (fProv && e.provincia !== fProv) return false;
+                if (fDist && e.distrito !== fDist) return false;
+                if (search && !e.entidad.toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function sortTable(key) {
+            if (sortKey === key) {
+                sortAsc = !sortAsc;
+            } else {
+                sortKey = key;
+                sortAsc = false;
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            filteredEntidades.sort(function(a, b) {
+                let vA = a[sortKey];
+                let vB = b[sortKey];
+                if (typeof vA === 'string') vA = vA.toLowerCase();
+                if (typeof vB === 'string') vB = vB.toLowerCase();
+                if (vA < vB) return sortAsc ? -1 : 1;
+                if (vA > vB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            // Display top 200 entities for scrolling
+            const rowsToDisplay = filteredEntidades.slice(0, 200);
+            rowsToDisplay.forEach(function(e) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = 
+                    '<td style="font-weight: 500;">' + e.entidad + '</td>' +
+                    '<td class="num-col">' + formatNumber(e.convocatorias) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-blue);">' + formatCurrency(e.monto_adjudicado) + '</td>' +
+                    '<td class="num-col">' + formatNumber(e.adjudicados) + '</td>' +
+                    '<td class="num-col" style="color: var(--accent-purple);">' + formatCurrency(e.monto_convocatoria) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            let grandConv = 0, grandAdj = 0, grandMontoConv = 0, grandMontoAdj = 0;
+            filteredEntidades.forEach(function(e) {
+                grandConv += e.convocatorias;
+                grandAdj += e.adjudicados;
+                grandMontoConv += e.monto_convocatoria;
+                grandMontoAdj += e.monto_adjudicado;
+            });
+
+            document.getElementById('totConv').textContent = formatNumber(grandConv);
+            document.getElementById('totAdj').textContent = formatNumber(grandAdj);
+            document.getElementById('totMontoConv').textContent = formatCurrency(grandMontoConv);
+            document.getElementById('totMontoAdj').textContent = formatCurrency(grandMontoAdj);
+            document.getElementById('rowCount').textContent = filteredEntidades.length + ' entidades encontradas';
+        }
+
+        function renderKPIs() {
+            if (!rawData || !rawData.anios || rawData.anios.length === 0) return;
+
+            const selectedAnio = document.getElementById('filterAnio').value;
+            let y1Index = 0;
+            if (selectedAnio) {
+                const idx = rawData.anios.findIndex(function(a) { return a.anio === selectedAnio; });
+                if (idx !== -1) y1Index = idx;
+            }
+
+            const y1 = rawData.anios[y1Index] || { anio: '2024', monto_adjudicado: 0, monto_convocatoria: 0, var_monto_adjudicado_pct: 0 };
+            const y2 = rawData.anios[y1Index + 1] || { anio: '2023', monto_adjudicado: 0, monto_convocatoria: 0, var_monto_adjudicado_pct: 0 };
+
+            document.getElementById('kpiTitle1').textContent = 'AÑO ' + y1.anio;
+            document.getElementById('kpiMontoAdj1').textContent = formatCurrency(y1.monto_adjudicado);
+            document.getElementById('kpiMontoConv1').textContent = formatCurrency(y1.monto_convocatoria);
+            
+            const badge1 = document.getElementById('kpiVar1');
+            const pct1 = y1.var_monto_adjudicado_pct || 0;
+            badge1.className = 'kpi-badge ' + (pct1 >= 0 ? 'positive' : 'negative');
+            badge1.innerHTML = '<span>' + (pct1 >= 0 ? '▲' : '▼') + ' ' + Math.abs(pct1) + '%</span> Variación Anual';
+
+            document.getElementById('kpiTitle2').textContent = 'AÑO ' + y2.anio;
+            document.getElementById('kpiMontoAdj2').textContent = formatCurrency(y2.monto_adjudicado);
+            document.getElementById('kpiMontoConv2').textContent = formatCurrency(y2.monto_convocatoria);
+            
+            const badge2 = document.getElementById('kpiVar2');
+            const pct2 = y2.var_monto_adjudicado_pct || 0;
+            badge2.className = 'kpi-badge ' + (pct2 >= 0 ? 'positive' : 'negative');
+            badge2.innerHTML = '<span>' + (pct2 >= 0 ? '▲' : '▼') + ' ' + Math.abs(pct2) + '%</span> Variación Anual';
+        }
+
+        function renderSectorChart() {
+            if (typeof Chart === 'undefined') return;
+            const el = document.getElementById('sectorChart');
+            if (!el) return;
+            const ctx = el.getContext('2d');
+            if (sectorChartInstance) sectorChartInstance.destroy();
+
+            const topSectores = (rawData.sectores || []).slice(0, 8);
+            const labels = topSectores.map(function(s) { return s.sector; });
+            const dataAdj = topSectores.map(function(s) { return s.adjudicados; });
+            const dataConv = topSectores.map(function(s) { return s.convocatorias; });
+
+            sectorChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Adjudicados',
+                            data: dataAdj,
+                            backgroundColor: '#38bdf8',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Convocatorias',
+                            data: dataConv,
+                            backgroundColor: '#818cf8',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+                    },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { display: false }, ticks: { color: '#f8fafc', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function renderEvolucionChart() {
+            if (typeof Chart === 'undefined') return;
+            const el = document.getElementById('evolucionChart');
+            if (!el) return;
+            const ctx = el.getContext('2d');
+            if (evolucionChartInstance) evolucionChartInstance.destroy();
+
+            const selectedAnio = document.getElementById('filterAnio').value;
+            const selectedMes = document.getElementById('filterMes').value;
+
+            let evoData = rawData.evolucion || [];
+            if (selectedAnio) {
+                evoData = evoData.filter(function(e) { return e.mes.startsWith(selectedAnio); });
+            }
+            if (selectedMes) {
+                evoData = evoData.filter(function(e) { return e.mes.endsWith('-' + selectedMes); });
+            }
+
+            const labels = evoData.map(function(e) { return e.mes; });
+            const dataAdj = evoData.map(function(e) { return e.adjudicados; });
+            const dataConv = evoData.map(function(e) { return e.convocatorias; });
+
+            evolucionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'CantAdjudicados',
+                            data: dataAdj,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'CantConvocatoria',
+                            data: dataConv,
+                            borderColor: '#818cf8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+                    },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', maxRotation: 45 } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        // Fetch external data.json
+        fetch('data.json')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { render(d); })
+            .catch(function(err) {
+                console.error('Error cargando data.json:', err);
+                const msg = document.getElementById('loadingMsg');
+                if (msg) {
+                    msg.textContent = 'Error: No se pudo cargar data.json.';
+                }
+            });
+    </script>
+</body>
+</html>
